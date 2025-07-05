@@ -10,14 +10,6 @@ public class CheckoutService {
         Cart cart = customer.getCart();
         // return false if cart is empty
         if (cart.isEmpty()) throw new RuntimeException("Cart is empty");
-        
-        // check for expired or out of stock items
-        for (Map.Entry<Product, Integer> p : cart.showCart().entrySet()) {
-            Product product = p.getKey();
-    
-            if (product.getQuantity() < p.getValue()) throw new RuntimeException("Product is out of stock");
-            if (product.isExpired()) throw new RuntimeException("Product Expired!");
-        }
 
         // calculate subtotal
         double subtotal = cart.getSubtotal();
@@ -34,8 +26,23 @@ public class CheckoutService {
         // calculate total
         double total = subtotal + shipping;
 
+
         // check if customer has enough balance 
         if (customer.getBalance() < total) throw new RuntimeException("Not Enough Balance!"); 
+
+        // check for expired or out of stock items and decrease quantity if neither
+        System.out.printf("** Checkout receipt **%n");
+
+        for (Map.Entry<Product, Integer> p : cart.showCart().entrySet()) {
+            Product product = p.getKey();
+    
+            if (product.getQuantity() < p.getValue()) throw new RuntimeException("Product is out of stock");
+            if (product.isExpired()) throw new RuntimeException("Product Expired!");
+            else {
+                product.reduceQuantity(p.getValue());
+                System.out.printf("%dx %s %.2f%n", p.getValue(), product.getName(), product.getPrice());
+            }
+        }
 
         // calculate new balance
         customer.decreaseBalance(total);
@@ -43,9 +50,11 @@ public class CheckoutService {
         // send shippable items 
         ShippingService.send(cart.getShippableProducts());
 
-        System.out.println("----------------------");
+        
+
+        System.out.printf("----------------------%n");
         // print receipt
-        System.out.printf("Subtotal: %.2f%nShipping fees: %.2f%nTotal: %.2f%nNew Balance: %.2f%n",
+        System.out.printf("Subtotal: %.2f%nShipping: %.2f%nAmount: %.2f%nNew Balance: %.2f%n",
             subtotal,
             shipping,
             total,
